@@ -26,7 +26,8 @@ impl<'a, E:'a > Container<'a, E> for VecContainer<E> {
     fn reserve(&mut self) -> Result<Id> {
         while let Some(free_id) = self.free_list.pop() {
             if let Some(slot) = self.vec.get_mut(free_id) {
-                mem::swap(slot, &mut Slot::Reserved);
+                let mut temp = Slot::Reserved;
+                mem::swap(slot, &mut temp);
                 return Ok(free_id);
             }
 
@@ -43,7 +44,7 @@ impl<'a, E:'a > Container<'a, E> for VecContainer<E> {
             match temp {
                 Slot::Reserved => return Ok(None),
                 Slot::Occupied(element) => return Ok(Some(element)),
-                _ => return Err(ContainerError::InvalidId),
+                Slot::Free => return Err(ContainerError::InvalidId),
             }
         }
         Err(ContainerError::InvalidId)
@@ -74,20 +75,12 @@ impl<'a, E:'a > Container<'a, E> for VecContainer<E> {
         match temp {
             Slot::Reserved => return Ok(None),
             Slot::Occupied(element) => return Ok(Some(element)),
-            _ => return Err(ContainerError::InvalidId),
+            Slot::Free => return Err(ContainerError::InvalidId),
         }
     }
 
     fn contains(&mut self, id: Id) -> Result<bool> {
-        if let Some(slot) = self.vec.get(id) {
-            let contains = match *slot  {
-                Slot::Occupied(_) => true,
-                Slot::Reserved => true,
-                _ => false,
-            };
-            return Ok(contains);
-        }
-        Ok(false)
+        Ok(self.contains_element(id))
     }
 
     fn ids(&'a mut self) -> Self::IdIterator{
@@ -114,12 +107,12 @@ impl<E> VecContainer<E> {
 
 
 
-    pub fn contains(&self, id: Id) -> bool {
+    pub fn contains_element(&self, id: Id) -> bool {
         if let Some(slot) = self.vec.get(id) {
             let contains = match *slot  {
                 Slot::Occupied(_) => true,
                 Slot::Reserved => true,
-                _ => false,
+                Slot::Free => false,
             };
             return contains;
         }

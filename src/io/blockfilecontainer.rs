@@ -95,8 +95,12 @@ pub struct BlockFileContainer {
 
 impl BlockFileContainer {
 
-    pub fn size(&self) -> Id{
-        self.reserved_bit_map.size() as Id
+    pub fn block_size(&self) -> usize {
+        self.block_size
+    }
+
+    pub fn size(&self) -> u64 {
+        self.reserved_bit_map.size()
     }
 
     pub fn reserve(&mut self) -> Result<Id> {
@@ -116,12 +120,6 @@ impl BlockFileContainer {
         }
         try!(self.reserved_bit_map.insert(id as u64));
         //println!("[reserve] reserved new ID {}", id);
-        Ok(id)
-    }
-
-    pub fn insert(&mut self, block: Block) -> Result<Id> {
-        let id = try!(self.reserve());
-        let _ = try!(self.update(id, block));
         Ok(id)
     }
 
