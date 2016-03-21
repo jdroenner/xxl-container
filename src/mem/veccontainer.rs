@@ -1,5 +1,5 @@
 use container::{Container, CloneContainer};
-use std::{mem, iter};
+use std::{mem};
 use error::{Result, ContainerError};
 
 pub type Id = usize;
@@ -20,8 +20,7 @@ enum Slot<E> {
 
 impl<'a, E:'a > Container<'a, E> for VecContainer<E> {
     type I = Id;
-    type IdIterator = iter::Empty<usize>;
-    //type IdIterator = iter::Filter<slice::Iter<'a, E>, Slot<E>>;
+    type IdIterator = Box<Iterator<Item=Self::I> + 'a>;
 
     fn reserve(&mut self) -> Result<Id> {
         while let Some(free_id) = self.free_list.pop() {
@@ -68,9 +67,11 @@ impl<'a, E:'a > Container<'a, E> for VecContainer<E> {
             return Err(ContainerError::InvalidId);
         }
 
+        /* This is not really usefull as a Vec will only shrink if it is called explicitly.
         while let Some(&Slot::Free) = self.vec.last() {
                 let _ = self.vec.pop();
         }
+        */
 
         match temp {
             Slot::Reserved => return Ok(None),
@@ -84,9 +85,14 @@ impl<'a, E:'a > Container<'a, E> for VecContainer<E> {
     }
 
     fn ids(&'a mut self) -> Self::IdIterator{
-        iter::empty()
+        Box::new(self.vec.iter().enumerate().filter(|&(_, slot)| {
+                return match *slot  {
+                   Slot::Occupied(_) => true,
+                   Slot::Reserved => true,
+                   _ => false,
+               }
+        }).map(|(index, _)| index))
     }
-
 }
 
 
